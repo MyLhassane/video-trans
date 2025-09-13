@@ -59,3 +59,64 @@ function extractVideoId(url) {
   const match = url.match(regex);
   return match ? match[1] : null;
 }
+
+const transcriptContainer = document.getElementById('transcript');
+
+async function loadCaptions(videoId) {
+  transcriptContainer.innerHTML = "⏳ Loading transcript...";
+
+  try {
+    // طلب subtitles (عادة الانجليزية code=en)
+    const apiUrl = `https://www.youtube.com/api/timedtext?lang=en&v=${videoId}`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
+
+    const res = await fetch(proxyUrl);
+    const data = await res.json();
+
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(data.contents, "text/xml");
+    const texts = xml.getElementsByTagName("text");
+
+    if (!texts.length) {
+      transcriptContainer.innerHTML = "⚠️ No captions available.";
+      return;
+    }
+
+    // عرض النصوص ككلمات منفصلة
+    transcriptContainer.innerHTML = "";
+    Array.from(texts).forEach(node => {
+      const words = node.textContent.split(" ");
+      words.forEach(word => {
+        const span = document.createElement("span");
+        span.className = "word";
+        span.textContent = word;
+        span.addEventListener("click", () => {
+          englishContent.textContent = `Meaning of "${word}" (placeholder)`;
+          arabicContent.textContent = `ترجمة كلمة "${word}" (تجريبية)`;
+          modal.classList.remove("hidden");
+        });
+        transcriptContainer.appendChild(span);
+        transcriptContainer.append(" "); // مسافة
+      });
+    });
+
+  } catch (err) {
+    transcriptContainer.innerHTML = "❌ Failed to load captions.";
+    console.error(err);
+  }
+}
+
+// تعديل حدث الفورم: بعد تغيير الفيديو نحمل الكابتشن
+videoForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const url = videoUrlInput.value.trim();
+  if (!url) return;
+
+  const videoId = extractVideoId(url);
+  if (videoId) {
+    videoFrame.src = `https://www.youtube.com/embed/${videoId}`;
+    loadCaptions(videoId); // تحميل الكابتشن
+  } else {
+    alert('⚠️ رابط غير صالح');
+  }
+});
