@@ -33,3 +33,29 @@ tabButtons.forEach(btn => {
     document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
   });
 });
+
+// Video form handling
+const videoForm = document.getElementById('videoForm');
+const videoUrlInput = document.getElementById('videoUrl');
+const videoFrame = document.getElementById('videoFrame');
+
+videoForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const url = videoUrlInput.value.trim();
+  if (!url) return;
+
+  // استخراج ID من الرابط
+  const videoId = extractVideoId(url);
+  if (videoId) {
+    videoFrame.src = `https://www.youtube.com/embed/${videoId}`;
+  } else {
+    alert('⚠️ رابط غير صالح');
+  }
+});
+
+// دالة لاستخراج ID من رابط يوتيوب
+function extractVideoId(url) {
+  const regex = /(?:youtube\.com\/.*v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+}
