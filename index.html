@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Transcript Tool</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Form -->
+  <form id="videoForm">
+    <input type="text" id="videoUrl" placeholder="Enter YouTube URL">
+    <button type="submit">Load Video</button>
+  </form>
+
+  <!-- Video -->
+  <div class="video-container">
+    <iframe id="videoFrame" width="560" height="315" 
+      src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+      frameborder="0" allowfullscreen>
+    </iframe>
+  </div>
+
+  <!-- Transcript -->
+  <div id="transcript">
+    <span class="word">Hello</span>
+    <span class="word">world</span>
+    <span class="word">this</span>
+    <span class="word">is</span>
+    <span class="word">a</span>
+    <span class="word">test</span>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <span id="closeModal" class="close">&times;</span>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="en">English</button>
+        <button class="tab-btn" data-tab="ar">Arabic</button>
+      </div>
+      <div id="tab-en" class="tab active">
+        <h3>English Meaning</h3>
+        <p id="englishContent">Placeholder meaning...</p>
+      </div>
+      <div id="tab-ar" class="tab">
+        <h3>Arabic Translation</h3>
+        <p id="arabicContent">Placeholder translation...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
