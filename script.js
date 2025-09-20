@@ -3,8 +3,17 @@ const videoUrlInput = document.getElementById('videoUrl');
 const videoFrame = document.getElementById('videoFrame');
 const transcriptContainer = document.getElementById('transcript');
 
+// عناصر المودال
+const modal = document.getElementById("modal");
+const englishContent = document.getElementById("englishContent");
+const arabicContent = document.getElementById("arabicContent");
+const closeModal = document.getElementById("closeModal");
+
+// إغلاق المودال
+closeModal.addEventListener("click", () => modal.classList.add("hidden"));
+
 videoForm.addEventListener('submit', (e) => {
-  e.preventDefault(); // منع إعادة تحميل الصفحة
+  e.preventDefault();
 
   const url = videoUrlInput.value.trim();
   if (!url) return;
@@ -28,61 +37,36 @@ function extractVideoId(url) {
   return match ? match[1] : null;
 }
 
-// تحميل وعرض الكابتشنات
+// تحميل وعرض الكابتشنات عبر خادم وسيط (Vercel Edge Function)
 async function loadCaptions(videoId) {
   transcriptContainer.innerHTML = "⏳ Loading transcript...";
 
   try {
-    const apiUrl = `https://www.youtube.com/api/timedtext?lang=en&v=${videoId}`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
+    // عنوان الـ API (نبدله لاحقًا بعنوان Vercel الخاص بنا)
+    const apiUrl = `/api/captions?videoId=${videoId}`;
 
-    const res = await fetch(proxyUrl);
-    const textData = await res.text();
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error("Bad response from server");
 
-    if (!textData) {
-      transcriptContainer.innerHTML = "❌ Proxy returned empty response.";
-      return;
-    }
+    const data = await res.json();
 
-    let data;
-    try {
-      data = JSON.parse(textData);
-    } catch (err) {
-      transcriptContainer.innerHTML = "❌ Failed to parse response.";
-      console.error("Raw response:", textData);
-      return;
-    }
-
-    if (!data.contents) {
+    if (!data || !data.captions) {
       transcriptContainer.innerHTML = "⚠️ No transcript found.";
       return;
     }
 
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(data.contents, "text/xml");
-    const texts = xml.getElementsByTagName("text");
-
-    if (!texts.length) {
-      transcriptContainer.innerHTML = "⚠️ No captions available.";
-      return;
-    }
-
     transcriptContainer.innerHTML = "";
-    Array.from(texts).forEach(node => {
-      const words = node.textContent.split(" ");
-      words.forEach(word => {
-        if (!word.trim()) return;
-        const span = document.createElement("span");
-        span.className = "word";
-        span.textContent = word;
-        span.addEventListener("click", () => {
-          englishContent.textContent = `Meaning of "${word}" (placeholder)`;
-          arabicContent.textContent = `ترجمة كلمة "${word}" (تجريبية)`;
-          modal.classList.remove("hidden");
-        });
-        transcriptContainer.appendChild(span);
-        transcriptContainer.append(" ");
+    data.captions.forEach(word => {
+      const span = document.createElement("span");
+      span.className = "word";
+      span.textContent = word;
+      span.addEventListener("click", () => {
+        englishContent.textContent = `Meaning of "${word}" (placeholder)`;
+        arabicContent.textContent = `ترجمة كلمة "${word}" (تجريبية)`;
+        modal.classList.remove("hidden");
       });
+      transcriptContainer.appendChild(span);
+      transcriptContainer.append(" ");
     });
 
   } catch (err) {
@@ -90,3 +74,4 @@ async function loadCaptions(videoId) {
     console.error(err);
   }
 }
+
