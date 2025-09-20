@@ -28,7 +28,7 @@ export default async function handler(req) {
 
     const xml = await ytRes.text();
 
-    // بسيط: استخراج النصوص بـ Regex (بدون DOMParser لأنه غير مدعوم على Edge Runtime)
+    // استخراج النصوص بـ Regex (بدون DOMParser لأنه غير مدعوم على Edge Runtime)
     const regex = /<text start="([^"]+)" dur="([^"]+)">([\s\S]*?)<\/text>/g;
     let match;
     const transcript = [];
@@ -37,12 +37,14 @@ export default async function handler(req) {
       transcript.push({
         start: match[1],
         dur: match[2],
-        text: decodeURIComponent(match[3]
-          .replace(/&amp;/g, "&")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/&#39;/g, "'")
-          .replace(/&quot;/g, '"'))
+        text: decodeURIComponent(
+          match[3]
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&#39;/g, "'")
+            .replace(/&quot;/g, '"')
+        ),
       });
     }
 
