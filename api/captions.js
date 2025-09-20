@@ -1,92 +1,77 @@
-export const config = {
-  runtime: "edge",
-};
-
-export default async function handler(req) {
+export default async function handler(req, res) {
   try {
-    const { searchParams } = new URL(req.url);
-    const videoId = searchParams.get("v");
+    const { v: videoId } = req.query;
 
     if (!videoId) {
-      return new Response(JSON.stringify({ error: "Missing videoId" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      res.status(400).json({ error: "Missing videoId" });
+      return;
     }
 
-    // جلب صفحة الفيديو
-    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+    // جلب صفحة الفيديو HTML
+    const videoPageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         "Accept-Language": "en-US,en;q=0.9",
       },
     });
 
-    if (!res.ok) {
-      return new Response(JSON.stringify({ error: "Failed to fetch video page" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+    if (!videoPageRes.ok) {
+      res.status(500).json({ error: "Failed to fetch video page" });
+      return;
     }
 
-    const html = await res.text();
+    const html = await videoPageRes.text();
 
     // البحث عن ytInitialPlayerResponse JSON
-    const jsonMatch = html.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});/s);
-    if (!jsonMatch) {
-      return new Response(JSON.stringify({ transcript: [], message: "✅ لا يوجد transcript متاح" }), {
-        headers: { "Content-Type": "application/json" },
-      });
+    const match = html.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});/s);
+    if (!match) {
+      res.json({ transcript: [], message: "✅ لا يوجد transcript متاح" });
+      return;
     }
 
-    const playerResponse = JSON.parse(jsonMatch[1]);
+    const playerResponse = JSON.parse(match[1]);
 
-    // محاولة الوصول للtranscript
+    // محاولة الوصول للـ transcript
     const captionTracks = playerResponse.captions?.playerCaptionsTracklistRenderer?.captionTracks;
     if (!captionTracks || !captionTracks.length) {
-      return new Response(JSON.stringify({ transcript: [], message: "✅ لا يوجد transcript متاح" }), {
-        headers: { "Content-Type": "application/json" },
-      });
+      res.json({ transcript: [], message: "✅ لا يوجد transcript متاح" });
+      return;
     }
 
-    // اختيار أول ترجمة إنجليزية متاحة
-    let track = captionTracks.find(t => t.languageCode.startsWith("en")) || captionTracks[0];
+    // اختيار أول ترجمة إنجليزية متاحة أو أي ترجمة متوفرة
+    const track = captionTracks.find(t => t.languageCode.startsWith("en")) || captionTracks[0];
 
     // جلب محتوى الترجمات بصيغة XML
     const xmlRes = await fetch(track.baseUrl);
     if (!xmlRes.ok) {
-      return new Response(JSON.stringify({ transcript: [], message: "❌ Failed to fetch captions XML" }), {
-        headers: { "Content-Type": "application/json" },
-      });
+      res.status(500).json({ transcript: [], message: "❌ Failed to fetch captions XML" });
+      return;
     }
 
     const xmlText = await xmlRes.text();
 
-    // تحليل XML
+    // تحليل XML لاستخراج الكلمات
     const regex = /<text start="([^"]+)" dur="([^"]+)">([\s\S]*?)<\/text>/g;
-    let match;
+    let m;
     const transcript = [];
-    while ((match = regex.exec(xmlText)) !== null) {
+    while ((m = regex.exec(xmlText)) !== null) {
       transcript.push({
-        start: parseFloat(match[1]),
-        dur: parseFloat(match[2]),
+        start: parseFloat(m[1]),
+        dur: parseFloat(m[2]),
         text: decodeURIComponent(
-          match[3].replace(/&amp;/g, "&")
-                   .replace(/&lt;/g, "<")
-                   .replace(/&gt;/g, ">")
-                   .replace(/&#39;/g, "'")
-                   .replace(/&quot;/g, '"')
-      )});
+          m[3].replace(/&amp;/g, "&")
+               .replace(/&lt;/g, "<")
+               .replace(/&gt;/g, ">")
+               .replace(/&#39;/g, "'")
+               .replace(/&quot;/g, '"')
+        )
+      });
     }
 
-    return new Response(JSON.stringify({ transcript }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    res.json({ transcript });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 }

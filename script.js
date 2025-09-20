@@ -54,7 +54,7 @@ async function loadTranscript(videoId) {
   transcriptContainer.innerHTML = "⏳ Loading transcript...";
 
   try {
-    const apiUrl = `/api/captions?v=${videoId}&lang=en`; // استدعاء Vercel API
+    const apiUrl = `/api/captions?v=${videoId}`; // استدعاء Vercel API
 
     const res = await fetch(apiUrl);
     if (!res.ok) {
